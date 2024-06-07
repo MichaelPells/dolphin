@@ -148,7 +148,7 @@ def demo_app(environ,start_response):
     content_type = str(mimetypes.guess_type(full_path)[0])
     
     start_response("200 OK", [('Content-Type', content_type+'; charset=utf-8')])
-    content = open(full_path, "rb").read()
+    content = open("C:/Users/user/Documents/Projects/dolphin/README.md", "rb").read()
     return [content]
 
 

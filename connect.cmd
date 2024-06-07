@@ -1,0 +1,1 @@
+netsh wlan connect ssid=%1 name=%2

@@ -1628,7 +1628,7 @@ def main():
         global Terminal
         global NewInput
 
-        while True:    
+        while True:
             while Path("file_terminal.txt").stat().st_mtime == terminal_last_modified: pass
             else:
                 Terminal_temp = hold_file_terminal()

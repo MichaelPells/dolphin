@@ -1,0 +1,11 @@
+{
+    "Dan": {
+        "address": "",
+        "port": 8080
+    },
+ 
+    "Deb": {
+        "address": "",
+        "port": 8000
+    }
+ }

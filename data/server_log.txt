@@ -618,3 +618,18 @@
 ::1 - - [14/Aug/2021 10:10:38] "GET /Videos/American/ HTTP/1.1" 200 -
 ::1 - - [14/Aug/2021 10:10:41] "GET /Videos/American/ HTTP/1.1" 200 -
 ::1 - - [15/Aug/2021 00:01:29] "GET /Videos/American/ HTTP/1.1" 200 -
+::1 - - [24/May/2024 15:33:51] "GET / HTTP/1.1" 200 -
+::1 - - [24/May/2024 15:33:53] code 404, message File not found
+::1 - - [24/May/2024 15:33:53] "GET /favicon.ico HTTP/1.1" 404 -
+::1 - - [24/May/2024 15:34:27] "GET /Pictures/ HTTP/1.1" 200 -
+::1 - - [24/May/2024 15:34:36] "GET /Pictures/FUTA%20GNS/ HTTP/1.1" 200 -
+::1 - - [24/May/2024 15:34:42] "GET /Pictures/FUTA%20GNS/IMG_20190306_151629_6.jpg HTTP/1.1" 200 -
+::1 - - [24/May/2024 15:35:03] "GET /Pictures/FUTA%20GNS/IMG_20190306_151629_6.jpg HTTP/1.1" 304 -
+::1 - - [24/May/2024 16:54:57] "GET /Videos/ HTTP/1.1" 200 -
+::1 - - [24/May/2024 16:55:04] "GET /Videos/American/ HTTP/1.1" 200 -
+::1 - - [24/May/2024 16:55:41] "GET /Videos/American/Akeelah.and.the.Bee.avi HTTP/1.1" 200 -
+::1 - - [24/May/2024 16:55:46] "GET /Videos/American/ HTTP/1.1" 200 -
+::1 - - [24/May/2024 16:55:48] "GET /Videos/American/ HTTP/1.1" 200 -
+::1 - - [24/May/2024 16:55:50] "GET /Videos/American/Wheely%20%282018%29%20%28NetNaija.com%29.srt HTTP/1.1" 200 -
+::1 - - [24/May/2024 16:56:15] "GET /Videos/American/Akeelah.and.the.Bee.avi HTTP/1.1" 200 -
+::1 - - [24/May/2024 16:56:16] "GET /Videos/American/Akeelah.and.the.Bee.avi HTTP/1.1" 200 -
