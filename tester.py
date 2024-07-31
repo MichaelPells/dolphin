@@ -1,14 +1,5 @@
-class A():
-    def __init__(self):
-        self.x = 20
-    def y(self):
-        return True
+import socket
 
-def hello():
-    return False
+ListenerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 
-a = A()
-a.z = hello
-
-b = A()
-print(a.__dir__())
+print(ListenerSocket.getsockname())

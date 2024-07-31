@@ -7,9 +7,9 @@ import threading
 import copy
 import json
 
-Settings = json.loads(open("./configurables/settings.json").read())
-Interface = Settings["Interface"] # Is the term 'Interface' correct for this usage?
-Port = int(Settings["Port"])
+settings = json.loads(open("./configurables/settings.json").read())
+interface = settings["interface"] # Is the term 'interface' correct for this usage?
+port = int(settings["port"])
 
 dolphins = json.loads(open("./configurables/dolphins.json").read())
 
@@ -31,26 +31,26 @@ ConnectionsByAddress = {
 class Authentication():
    def __init__(self):
       # guest
-      if sys.argv[2][0] == "1": # Change this condition to Settings later
+      if sys.argv[2][0] == "1": # Change this condition to settings later
          guest = socketio.Client()
 
          def guest_handshake(data):
-            guest_dolphin = data["guest_dolphin"]
-            host_dolphin = data["host_dolphin"]
+            GuestDolphin = data["GuestDolphin"]
+            HostDolphin = data["HostDolphin"]
             host = ConnectionsBySID["HOST"]
 
-            ConnectionsByAddress[guest_dolphin][f'{host.split(":")[0]}:{data["speaker_port"]}'] = {"pair": host,
-                                                                                                 "dolphin": host_dolphin
+            ConnectionsByAddress[GuestDolphin][f'{host.split(":")[0]}:{data["SpeakerPort"]}'] = {"pair": host,
+                                                                                                 "dolphin": HostDolphin
                                                                                                  }
-            listener_socket = Transmitter.speakers[guest_dolphin]._listeners[host][host_dolphin]
-            Transmitter.speakers[guest_dolphin].listeners[f'{host.split(":")[0]}:{data["listener_port"]}'] = listener_socket
+            ListenerSocket = Transmitter.speakers[GuestDolphin].ListenersTemp[host][HostDolphin]
+            Transmitter.speakers[GuestDolphin].listeners[f'{host.split(":")[0]}:{data["ListenerPort"]}'] = ListenerSocket
 
-            if host not in ConnectionsForDolphins[guest_dolphin]:
-               ConnectionsForDolphins[guest_dolphin][host] = {}
+            if host not in ConnectionsForDolphins[GuestDolphin]:
+               ConnectionsForDolphins[GuestDolphin][host] = {}
 
-            ConnectionsForDolphins[guest_dolphin][host][host_dolphin] = {
-               "listener_address": (host.split(":")[0], data["listener_port"]),
-               "speaker_address": (host.split(":")[0], data["speaker_port"])
+            ConnectionsForDolphins[GuestDolphin][host][HostDolphin] = {
+               "ListenerAddress": (host.split(":")[0], data["ListenerPort"]),
+               "SpeakerAddress": (host.split(":")[0], data["SpeakerPort"])
             }
 
             print("guest -------------------")
@@ -62,7 +62,7 @@ class Authentication():
          self.guest = guest
 
       # host
-      if sys.argv[2][1] == "1": # Change this condition to Settings later
+      if sys.argv[2][1] == "1": # Change this condition to settings later
          host = socketio.Server()
          server = socketio.WSGIApp(host)
 
@@ -86,23 +86,23 @@ class Authentication():
          host.on("disconnect", disconnect)
 
          def host_handshake(sid, data):
-            host_dolphin = data["host_dolphin"]
-            guest_dolphin = data["guest_dolphin"]
+            HostDolphin = data["HostDolphin"]
+            GuestDolphin = data["GuestDolphin"]
             guest = ConnectionsBySID[sid]
 
-            ConnectionsByAddress[host_dolphin][f'{guest.split(":")[0]}:{data["speaker_port"]}'] = {"pair": guest,
-                                                                                                 "dolphin": guest_dolphin
+            ConnectionsByAddress[HostDolphin][f'{guest.split(":")[0]}:{data["SpeakerPort"]}'] = {"pair": guest,
+                                                                                                 "dolphin": GuestDolphin
                                                                                                  }
 
-            if guest not in ConnectionsForDolphins[host_dolphin]:
-               ConnectionsForDolphins[host_dolphin][guest] = {}
+            if guest not in ConnectionsForDolphins[HostDolphin]:
+               ConnectionsForDolphins[HostDolphin][guest] = {}
 
-            ConnectionsForDolphins[host_dolphin][guest][guest_dolphin] = {
-               "listener_address": (guest.split(":")[0], data["listener_port"]),
-               "speaker_address": (guest.split(":")[0], data["speaker_port"])
+            ConnectionsForDolphins[HostDolphin][guest][GuestDolphin] = {
+               "ListenerAddress": (guest.split(":")[0], data["ListenerPort"]),
+               "SpeakerAddress": (guest.split(":")[0], data["SpeakerPort"])
             }
 
-            ReturnHandshake(sid, data, guest, guest_dolphin, host_dolphin)
+            ReturnHandshake(sid, data, guest, GuestDolphin, HostDolphin)
 
             print("host -------------------")
             print(ConnectionsBySID)
@@ -111,64 +111,64 @@ class Authentication():
             print(sid)
          host.on("handshake", host_handshake)
 
-         def ReturnHandshake(sid, data, guest, guest_dolphin, host_dolphin):
-            listener_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            listener_socket.bind((Interface, 0))
+         def ReturnHandshake(sid, data, guest, GuestDolphin, HostDolphin):
+            ListenerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            ListenerSocket.bind((interface, 0))
 
-            Transmitter.speakers[host_dolphin].listeners[f'{guest.split(":")[0]}:{data["listener_port"]}'] = listener_socket
+            Transmitter.speakers[HostDolphin].listeners[f'{guest.split(":")[0]}:{data["ListenerPort"]}'] = ListenerSocket
 
-            port = dolphins[host_dolphin]["Port"]
-            speaker_port = listener_socket.getsockname()[1]
-            host.emit("handshake", {"guest_dolphin": guest_dolphin, "host_dolphin": host_dolphin, "listener_port": port, "speaker_port": speaker_port}, room = sid)
+            port = dolphins[HostDolphin]["Port"]
+            SpeakerPort = ListenerSocket.getsockname()[1]
+            host.emit("handshake", {"GuestDolphin": GuestDolphin, "HostDolphin": HostDolphin, "ListenerPort": port, "SpeakerPort": SpeakerPort}, room = sid)
 
          self.host = host
 
-         eventlet.wsgi.server(eventlet.listen((Interface, Port)), server)
+         eventlet.wsgi.server(eventlet.listen((interface, port)), server)
 
    # Issue: There must be a different guest for each connect
    def connect(self, host):
       address, port = host
-      guest = copy.deepcopy(self.guest)
+      newguest = copy.deepcopy(self.guest)
 
       def connect():
-         # for attr in dir(guest):
-         #    print(f"{attr}:            {guest.__getattribute__(attr)}\n")
+         # for attr in dir(newguest):
+         #    print(f"{attr}:            {newguest.__getattribute__(attr)}\n")
 
          ConnectionsBySID["HOST"] = f'{address}:{port}'
          ConnectionsByPair[f'{address}:{port}'] = "HOST"
-      guest.on("connect", connect)
+      newguest.on("connect", connect)
 
       def connect_error(error):
-         try: del hosts[f'{guest.host[0]}:{guest.host[1]}']
+         try: del hosts[f'{newguest.host[0]}:{newguest.host[1]}']
          except: pass
          print(error)
-      guest.on("connect_error", connect_error)
+      newguest.on("connect_error", connect_error)
 
       def disconnect():
-         try: del hosts[f'{guest.host[0]}:{guest.host[1]}']
+         try: del hosts[f'{newguest.host[0]}:{newguest.host[1]}']
          except: pass
-         print(f'{guest.host[0]}:{guest.host[1]} was disconnected.')
-      guest.on("disconnect", disconnect)
+         print(f'{newguest.host[0]}:{newguest.host[1]} was disconnected.')
+      newguest.on("disconnect", disconnect)
 
       try:
-         guest.connect(url = f'http://{address}:{port}', auth = {"Port": 5001}) # Replace 5001 with `Port` later.
+         newguest.connect(url = f'http://{address}:{port}', auth = {"Port": 5001}) # Replace 5001 with `Port` later.
       except: pass
-      guest.host = host
-      hosts[f'{address}:{port}'] = guest # Later, delete this entry when `connect_error` or `disconnect` events occur.
+      newguest.host = host
+      hosts[f'{address}:{port}'] = newguest # Later, delete this entry when `connect_error` or `disconnect` events occur.
 
-def InitiateHandshake(host, host_dolphin, guest_dolphin):
+def InitiateHandshake(host, HostDolphin, GuestDolphin):
    try:
-      listener_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-      listener_socket.bind((Interface, 0))
+      ListenerSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+      ListenerSocket.bind((interface, 0))
       
-      Transmitter.speakers[guest_dolphin]._listeners[f'{host[0]}:{host[1]}'] = {
-         host_dolphin: listener_socket
+      Transmitter.speakers[GuestDolphin].ListenersTemp[f'{host[0]}:{host[1]}'] = {
+         HostDolphin: ListenerSocket
       }
 
-      port = dolphins[guest_dolphin]["Port"]
-      speaker_port = listener_socket.getsockname()[1]
+      port = dolphins[GuestDolphin]["Port"]
+      SpeakerPort = ListenerSocket.getsockname()[1]
       guest = hosts[f'{host[0]}:{host[1]}']
-      guest.emit("handshake", {"host_dolphin": host_dolphin, "guest_dolphin": guest_dolphin, "listener_port": port, "speaker_port": speaker_port})
+      guest.emit("handshake", {"HostDolphin": HostDolphin, "GuestDolphin": GuestDolphin, "ListenerPort": port, "SpeakerPort": SpeakerPort})
    except KeyError:
       pass # Do something here
 
@@ -176,28 +176,28 @@ class Transmitter():
    def __init__(self, dolphin):
       self.dolphin = dolphin
       self.listeners = {}
-      self._listeners = {}
+      self.ListenersTemp = {}
 
       self.speaking = True
 
    speakers = {}
 
    def connect(self, listener):
-      listener_socket = self.listeners[f'{listener[0]}:{listener[1]}']
+      ListenerSocket = self.listeners[f'{listener[0]}:{listener[1]}']
       
       try: # Will this really work in all cases? How about disconnects due to timeout or anything else?
-         listener_socket.getpeername()
+         ListenerSocket.getpeername()
       except:
-         listener_socket.connect(listener)
+         ListenerSocket.connect(listener)
 
-      return listener_socket
+      return ListenerSocket
 
    def speak(self, listener, data="", encoding="utf-8"):
-      listener_socket = self.connect(listener)
+      ListenerSocket = self.connect(listener)
 
       print(f'Sending: {data}')
       data = str(data+"\n").encode("utf-8")
-      print(f'{listener_socket.sendall(data)}: {listener} - {listener_socket.getpeername()}')
+      print(f'{ListenerSocket.sendall(data)}: {listener} - {ListenerSocket.getpeername()}')
 
    def disconnect(self):
       self.newspeaker.shutdown(socket.SHUT_RDWR)
@@ -217,18 +217,18 @@ class Handler(socketserver.StreamRequestHandler):
          return
 
       # Authenticate
-      speaker_address = self.client_address
-      if f'{speaker_address[0]}:{speaker_address[1]}' not in ConnectionsByAddress[self.dolphin]: return
+      SpeakerAddress = self.client_address
+      if f'{SpeakerAddress[0]}:{SpeakerAddress[1]}' not in ConnectionsByAddress[self.dolphin]: return
 
-      pair = ConnectionsByAddress[self.dolphin][f'{speaker_address[0]}:{speaker_address[1]}']["pair"]
-      dolphin = ConnectionsByAddress[self.dolphin][f'{speaker_address[0]}:{speaker_address[1]}']["dolphin"]
+      pair = ConnectionsByAddress[self.dolphin][f'{SpeakerAddress[0]}:{SpeakerAddress[1]}']["pair"]
+      dolphin = ConnectionsByAddress[self.dolphin][f'{SpeakerAddress[0]}:{SpeakerAddress[1]}']["dolphin"]
 
       # self.data = str(self.rfile.readline().strip(), "utf-8")
       # print(self.data)
 
-      listener_address = ConnectionsForDolphins[self.dolphin][pair][dolphin]["listener_address"]
+      ListenerAddress = ConnectionsForDolphins[self.dolphin][pair][dolphin]["ListenerAddress"]
       speaker = Transmitter.speakers[self.dolphin]
-      speaker.speak(listener_address, f'{self.data.split()[0]} {int(self.data.split()[1]) + 10}')
+      speaker.speak(ListenerAddress, f'{self.data.split()[0]} {int(self.data.split()[1]) + 10}')
 
 
 def Processor(dolphin): # Try to change this into a class soon.
@@ -242,7 +242,7 @@ handlers = {}
 class Receiver():
    def __init__(self, dolphin):
       self.dolphin = dolphin
-      self.address = (Interface, dolphins[dolphin]["Port"])
+      self.address = (interface, dolphins[dolphin]["Port"])
       handler = handlers[dolphin]
 
       self.listener = socketserver.ThreadingTCPServer(self.address, handler)
@@ -269,7 +269,7 @@ class Receiver():
    def stop(self):
       if self.listening:
          self.listening = False
-         try: Transmitter(self.speaker).speak_once() # Using up the last .handle_request(), if any from listen().
+         try: Transmitter(self.speaker).speakonce() # Using up the last .handle_request(), if any from listen().
          except: pass
          print("trying to close the server")
          self.listener.server_close()
