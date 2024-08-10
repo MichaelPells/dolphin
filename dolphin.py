@@ -18,6 +18,7 @@ Port = int(sys.argv[1]) if len(sys.argv) > 1 else int(Settings["Port"]) # This s
 Role = Settings["Role"]
 
 protocol_delimeter = "\nDOLPHIN\n".encode("utf-8")
+socketio_path = "auth"
 
 dolphins = json.loads(open("./configurables/dolphins.json").read())
 
@@ -146,7 +147,6 @@ class Authentication():
          # for attr in dir(guest):
          #    print(f"{attr}:            {guest.__getattribute__(attr)}\n")
 
-         print("connected...")
          ConnectionsBySID["HOST"] = f'{address}:{port}'
          ConnectionsByPair[f'{address}:{port}'] = "HOST"
       guest.on("connect", connect)
@@ -164,10 +164,11 @@ class Authentication():
       guest.on("disconnect", disconnect)
 
       try:
-         guest.connect(url = f'http://{address}:{port}', auth = {"Port": 5001}) # Replace 5001 with `Port` later.
-      except: pass
-      guest.host = host
-      hosts[f'{address}:{port}'] = guest # Later, delete this entry when `connect_error` or `disconnect` events occur.
+         guest.connect(url = f'http://{address}:{port}', auth = {"Port": 5001}, socketio_path=socketio_path) # Replace 5001 with `Port` later.
+         guest.host = host
+         hosts[f'{address}:{port}'] = guest # Later, delete this entry when `connect_error` or `disconnect` events occur.
+      except:
+         pass # Return an error here later
 
 def InitiateHandshake(host, host_dolphin, guest_dolphin):
    try:
@@ -437,9 +438,6 @@ def connect(args):
    host_ip = host_addr[0]
    host_port = int(host_addr[1])
    gateway.connect((host_ip, host_port))
-   while not hosts[host].connected: pass # Is this really waiting??? Or do we even need to wait?
-   else:
-      print("connected") # Report this success later
 
 def handshake(args):
    host = args[2]
@@ -479,7 +477,7 @@ def Input(environ, start_response):
    return [raw_input.encode()]
 
 def listen():
-   app = socketio.WSGIApp(gateway.host, Input)
+   app = socketio.WSGIApp(gateway.host, Input, socketio_path=socketio_path)
    eventlet.wsgi.server(eventlet.listen((Interface, Port)), app, log_output=False)
 
 threading.Thread(target=listen).start()
