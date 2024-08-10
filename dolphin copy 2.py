@@ -75,7 +75,8 @@ class Authentication():
 
       # host
       if Role == "host" or Role == "any":
-         host = socketio.Server()
+         host = socketio.Server(cors_allowed_origins=None)
+         # .handle_request
 
          def connect(sid, environ, auth):
             # for key in environ:
@@ -165,6 +166,7 @@ class Authentication():
 
       try:
          guest.connect(url = f'http://{address}:{port}', auth = {"Port": 5001}) # Replace 5001 with `Port` later.
+         print("connected")
       except: pass
       guest.host = host
       hosts[f'{address}:{port}'] = guest # Later, delete this entry when `connect_error` or `disconnect` events occur.
@@ -442,11 +444,9 @@ def connect(args):
       print("connected") # Report this success later
 
 def handshake(args):
-   host = args[2]
+   host = args[1]
    if hosts[host].connected:
-      InitiateHandshake(host, args[1], args[0])
-   else:
-      pass # Report error here
+      InitiateHandshake(host, args[2], args[0])
 
 commands = [
    "start",
@@ -463,23 +463,157 @@ def run(raw_input):
    if command in commands:
       globals()[command](args)
 
+
 gateway = Authentication()
 
-def Input(environ, start_response):
-   raw_input = environ["wsgi.input"].read().strip().decode('utf-8')
 
-   threading.Thread(target=run, args=[raw_input]).start()
+# pq = self.path.split('?', 1)
+# env['RAW_PATH_INFO'] = pq[0]
+# env['PATH_INFO'] = urllib.parse.unquote(pq[0], encoding='latin1')
+# ct = self.headers.get('content-type')
+# if ct is None:
+#    try:
+#          ct = self.headers.type
+#    except AttributeError:
+#          ct = self.headers.get_content_type()
+# env['CONTENT_TYPE'] = ct
+# client_addr = addr_to_host_port(self.client_address)
+# env['REMOTE_PORT'] = str(client_addr[1])
 
-   status = "200 OK"
-   headers = [
-      ("Content-Type", "text/plain")
-   ]
+# try:
+#    headers = self.headers.headers
+# except AttributeError:
+#    headers = self.headers._headers
+# else:
+#    headers = [h.split(':', 1) for h in headers]
 
-   start_response(status, headers)
-   return [raw_input.encode()]
+# env['headers_raw'] = headers_raw = tuple((k, v.strip(' \t\n\r')) for k, v in headers)
+# for k, v in headers_raw:
+#    k = k.replace('-', '_').upper()
+#    if k in ('CONTENT_TYPE', 'CONTENT_LENGTH'):
+#          # These do not get the HTTP_ prefix and were handled above
+#          continue
+#    envk = 'HTTP_' + k
+#    if envk in env:
+#          env[envk] += ',' + v
+#    else:
+#          env[envk] = v
+
+# if env.get('HTTP_EXPECT', '').lower() == '100-continue':
+#    wfile = self.wfile
+#    wfile_line = b'HTTP/1.1 100 Continue\r\n'
+# else:
+#    wfile = None
+#    wfile_line = None
+# chunked = env.get('HTTP_TRANSFER_ENCODING', '').lower() == 'chunked'
+# env['wsgi.input'] = env['eventlet.input'] = Input(
+#    self.rfile, length, self.connection, wfile=wfile, wfile_line=wfile_line,
+#    chunked_input=chunked)
+
+class Handler(http.server.SimpleHTTPRequestHandler, simple_server.WSGIRequestHandler):
+   def do_GET(self):
+      if self.path.startswith("/socket.io/"):
+
+         def start_response(status, headers):
+            self.send_response(int(status.split()[0]))
+            for header in headers:
+               self.send_header(*header)
+
+         env = self.get_environ_2()
+         response = self.server.gateway.handle_request(env, start_response)
+         print(response)
+
+         # self.send_header("Access-Control-Allow-Origin", "*")
+         print(f'http://{self.client_address[0]}:{self.client_address[1]}')
+         self.end_headers()
+         self.wfile.write(response[0])
+         print("------------------------------------------")
+      else:
+         self.handle_input()
+
+   def do_POST(self):
+      self.do_GET()
+
+   def get_environ_2(self):
+      env = self.get_environ()
+
+      pq = self.path.split('?', 1)
+      env['RAW_PATH_INFO'] = pq[0]
+      env['PATH_INFO'] = urllib.parse.unquote(pq[0], encoding='latin1')
+      ct = self.headers.get('content-type')
+      if ct is None:
+         try:
+               ct = self.headers.type
+         except AttributeError:
+               ct = self.headers.get_content_type()
+      env['CONTENT_TYPE'] = ct
+      client_addr = self.client_address
+      env['REMOTE_PORT'] = str(client_addr[1])
+
+      # print(self.headers.get("Origin"))
+      # def not_origin(header):
+      #    if header[0] == "Origin":
+      #       return False
+      #    else:
+      #       return True
+      # self.headers._headers = list(filter(not_origin, self.headers._headers))
+      # print(self.headers._headers)
+      # print(self.headers.get("Origin"))
+
+      try:
+         headers = self.headers.headers
+      except AttributeError:
+         headers = self.headers._headers
+      else:
+         headers = [h.split(':', 1) for h in headers]
+
+      env['headers_raw'] = headers_raw = tuple((k, v.strip(' \t\n\r')) for k, v in headers)
+      for k, v in headers_raw:
+         k = k.replace('-', '_').upper()
+         if k in ('CONTENT_TYPE', 'CONTENT_LENGTH', "ORIGIN", "HOST"):
+               # These do not get the HTTP_ prefix and were handled above
+               continue
+         envk = 'HTTP_' + k
+         if envk in env:
+               env[envk] += ',' + v
+         else:
+               env[envk] = v
+
+      if env.get('HTTP_EXPECT', '').lower() == '100-continue':
+         wfile = self.wfile
+         wfile_line = b'HTTP/1.1 100 Continue\r\n'
+      else:
+         wfile = None
+         wfile_line = None
+      chunked = env.get('HTTP_TRANSFER_ENCODING', '').lower() == 'chunked'
+      env['wsgi.input'] = eventlet.wsgi.Input(
+         self.rfile, self.headers.get('content-length'), self.connection, wfile=wfile, wfile_line=wfile_line,
+         chunked_input=chunked)
+      
+      return env
+
+   def handle_input(self):
+      raw_input = self.rfile.readline().strip().decode("utf-8")
+      threading.Thread(target=run, args=[raw_input]).start()
+
+      self.send_response(200)
+      self.send_header("Content-Type", "text/plain")
+      self.end_headers()
+      self.wfile.write(raw_input.encode())
+
+      print(raw_input)
+
+class Server(simple_server.WSGIServer, http.server.ThreadingHTTPServer):
+   def __init__(self, address, Handler, gateway):
+      super().__init__(address, Handler)
+      self.gateway = gateway
 
 def listen():
-   app = socketio.WSGIApp(gateway.host, Input)
-   eventlet.wsgi.server(eventlet.listen((Interface, Port)), app, log_output=False)
+   server = Server((Interface, Port), Handler, gateway.host)
+   server.serve_forever()
 
 threading.Thread(target=listen).start()
+   
+# import time
+# time.sleep(5)
+# thread("StopListener", args = {"port": 8080}).start()

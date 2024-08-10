@@ -1,11 +1,11 @@
 {
     "Dan": {
-        "HandlerMachine": "default",
+        "Handler": "default",
         "Port": 8080
     },
 
     "Deb": {
-        "HandlerMachine": "default",
+        "Handler": "default",
         "Port": 8000
     }
  }

@@ -1,50 +1,33 @@
-import socketio
-import eventlet
+# import socket
+# import threading
+# import time
 
-# class Auth():
-#    def __init__(self): pass
-#    authenticators = {}
+# status = {}
+# status["_closed"] = True
 
-# Auth.authenticators[8080] = Auth()
+# def create_socket(port):
+#    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+#    sock.bind(("", port))
+#    sock.listen(5)
 
-ConnectionsSID = {}
-ConnectionsIP = {}
+#    while True:
+#       conn, addr = sock.accept()
+#       while True:
+#          data = conn.recv(1024)
+#          print(f'SOCK {port}: {data}')
 
-sio = socketio.Server()
-app = socketio.WSGIApp(sio)
+# threading.Thread(target=create_socket, args=(3000))
+# threading.Thread(target=create_socket, args=(4000))
 
-def do_handshake(sid, port):
-   sio.emit("handshake", {"port": port}, room = sid)
+# time.sleep(10)
 
-   print(f"Handshake accepted:   {ConnectionsIP}")
+class o:
+    a = True
 
-@sio.event
-def connect(sid, environ, _):
-   print("connected:", sid)
-   sio.emit("hello", {"port": "port"}, room = sid)
-   ip = environ['REMOTE_ADDR']
-   ConnectionsSID[sid] = ip
-   ConnectionsIP[ip] = {
-      "sid": sid,
-      "port": None,
-      "handshake_complete": False
-      }
+cat = o
+dog = o
+dog = cat
 
-@sio.event
-def disconnect(sid):
-   ip = ConnectionsSID[sid]
-   del ConnectionsSID[sid]
-   del ConnectionsIP[ip]
-   print("disconnected")
-
-@sio.event
-def handshake(sid, data):
-   ip = ConnectionsSID[sid]
-   ConnectionsIP[ip]["port"] = data["port"]
-   do_handshake(sid)
-
-   ConnectionsIP[ip]["handshake_complete"] = True
-
-   print(f"Handshake complete:   {ConnectionsIP}")
-
-eventlet.wsgi.server(eventlet.listen(("", 5000)), app)
+print(dog.a)
+cat.a = False
+print(dog.a)

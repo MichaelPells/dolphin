@@ -64,7 +64,7 @@ class Authentication():
       # host
       if sys.argv[2][1] == "1": # Change this condition to Settings later
          host = socketio.Server()
-         server = socketio.WSGIApp(host)
+         app = socketio.WSGIApp(host)
 
          def connect(sid, environ, auth):
             # for key in environ:
@@ -123,7 +123,7 @@ class Authentication():
 
          self.host = host
 
-         eventlet.wsgi.server(eventlet.listen((Interface, Port)), server)
+         eventlet.wsgi.server(eventlet.listen((Interface, Port)), app)
 
    # Issue: There must be a different guest for each connect
    def connect(self, host):
@@ -134,6 +134,7 @@ class Authentication():
          # for attr in dir(guest):
          #    print(f"{attr}:            {guest.__getattribute__(attr)}\n")
 
+         print("connected...")
          ConnectionsBySID["HOST"] = f'{address}:{port}'
          ConnectionsByPair[f'{address}:{port}'] = "HOST"
       guest.on("connect", connect)
@@ -234,7 +235,7 @@ class Handler(socketserver.StreamRequestHandler):
 def Processor(dolphin): # Try to change this into a class soon.
    handler = copy.deepcopy(Handler)
    handler.dolphin = dolphin
-   handler.machine = dolphins[dolphin]["HandlerMachine"]
+   handler.machine = dolphins[dolphin]["Handler"]
    return handler
 
 handlers = {}
@@ -312,7 +313,8 @@ if sys.argv[2][0] == "1":
    gateway.connect(host)
    while not hosts[f'{host[0]}:{host[1]}'].connected: pass # Is this really waiting??? Or do we even need to wait?
    else:
-      InitiateHandshake(host, "Dan", "Deb")
+      print("connected")
+      # InitiateHandshake(host, "Dan", "Deb")
 # import time
 # time.sleep(5)
 # thread("StopListener", args = {"port": 8080}).start()
