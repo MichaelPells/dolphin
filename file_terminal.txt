@@ -1,1 +1,0 @@
-{"no": "2", "system": "ALL", "message": "exit all"}
