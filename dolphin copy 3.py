@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import sys
 import socket
 import socketio
@@ -11,8 +9,6 @@ from multiprocessing import Process
 from listener import listen
 import wsgi
 from pool import Pool
-import logger
-import time # testing
 
 pool = Pool()
 pool.start()
@@ -71,10 +67,10 @@ class Authentication():
                "speaker_address": (host.split(":")[0], data["speaker_port"])
             }
 
-            logger.write("guest -------------------")
-            logger.write(ConnectionsBySID)
-            logger.write(ConnectionsByPair)
-            logger.write(ConnectionsForDolphins)
+            print("guest -------------------")
+            print(ConnectionsBySID)
+            print(ConnectionsByPair)
+            print(ConnectionsForDolphins)
          guest.on("handshake", guest_handshake)
 
          self.guest = guest
@@ -85,7 +81,7 @@ class Authentication():
 
          def connect(sid, environ, auth):
             # for key in environ:
-            #    logger.write(f"{key}:             {environ[key]}\n")
+            #    print(f"{key}:             {environ[key]}\n")
 
             guest = f'{environ["REMOTE_ADDR"]}:{auth["Port"]}'
             if guest not in ConnectionsByPair:
@@ -121,11 +117,11 @@ class Authentication():
 
             ReturnHandshake(sid, data, guest, guest_dolphin, host_dolphin)
 
-            logger.write("host -------------------")
-            logger.write(ConnectionsBySID)
-            logger.write(ConnectionsByPair)
-            logger.write(ConnectionsForDolphins)
-            logger.write(sid)
+            print("host -------------------")
+            print(ConnectionsBySID)
+            print(ConnectionsByPair)
+            print(ConnectionsForDolphins)
+            print(sid)
          host.on("handshake", host_handshake)
 
          def ReturnHandshake(sid, data, guest, guest_dolphin, host_dolphin):
@@ -150,7 +146,7 @@ class Authentication():
 
       def connect():
          # for attr in dir(guest):
-         #    logger.write(f"{attr}:            {guest.__getattribute__(attr)}\n")
+         #    print(f"{attr}:            {guest.__getattribute__(attr)}\n")
 
          ConnectionsBySID["HOST"] = f'{address}:{port}'
          ConnectionsByPair[f'{address}:{port}'] = "HOST"
@@ -159,13 +155,13 @@ class Authentication():
       def connect_error(error):
          try: del hosts[f'{guest.host[0]}:{guest.host[1]}']
          except: pass
-         logger.write(error)
+         print(error)
       guest.on("connect_error", connect_error)
 
       def disconnect():
          try: del hosts[f'{guest.host[0]}:{guest.host[1]}']
          except: pass
-         logger.write(f'{guest.host[0]}:{guest.host[1]} was disconnected.')
+         print(f'{guest.host[0]}:{guest.host[1]} was disconnected.')
       guest.on("disconnect", disconnect)
 
       try:
@@ -174,7 +170,6 @@ class Authentication():
          hosts[f'{address}:{port}'] = guest # Later, delete this entry when `connect_error` or `disconnect` events occur.
       except:
          pass # Return an error here later
-
 
 def InitiateHandshake(host, host_dolphin, guest_dolphin):
    try:
@@ -191,6 +186,7 @@ def InitiateHandshake(host, host_dolphin, guest_dolphin):
       guest.emit("handshake", {"host_dolphin": host_dolphin, "guest_dolphin": guest_dolphin, "listener_port": port, "speaker_port": speaker_port})
    except KeyError:
       pass # Do something here
+
 
 
 class Receiver():
@@ -211,6 +207,22 @@ class Receiver():
 
    listeners = {}
 
+   class thread(threading.Thread):
+      def __init__(_self, self, stage, connection, address):
+         threading.Thread.__init__(_self)
+         _self.self = self
+         _self.stage = stage
+         _self.connection = connection
+         _self.address = address
+
+      def run(_self):
+         stages = {
+            1: Receiver.listeners[_self.self.dolphin],
+            2: Processor.handlers[_self.self.dolphin],
+         }
+
+         stages[_self.stage].action(_self.connection, _self.address)
+
    def listen(self):
       self.listening = True
       try:
@@ -227,14 +239,12 @@ class Receiver():
       # if f'{address[0]}:{address[1]}' not in ConnectionsByAddress[self.dolphin]: pass
 
       # speaker = ConnectionsByAddress[self.dolphin][f'{address[0]}:{address[1]}']
-
-      self.messages[f'{address[0]}:{address[1]}'] = []
-
-      pool.assign(Receiver.listeners[self.dolphin].action, [connection, address])
-      pool.assign(Processor.handlers[self.dolphin].action, [connection, address])
+      self.thread(self, 1, connection, address).start()
+      self.thread(self, 2, connection, address).start()
 
    def action(self, connection, address):
       self.buffers[f'{address[0]}:{address[1]}'] = b''
+      self.messages[f'{address[0]}:{address[1]}'] = []
 
       state = "new"
 
@@ -297,12 +307,11 @@ class Receiver():
 
    def close(self):
          self.stop()
-         logger.write("trying to close the server")
+         print("trying to close the server")
          self.listener.shutdown(socket.SHUT_RD)
          self.listener.close()
          # Close all child sockets too
-         logger.write("Server stopped!")
-
+         print("Server stopped!")
 
 class Processor():
    def __init__(self, dolphin):
@@ -318,14 +327,14 @@ class Processor():
 
          while len(Receiver.listeners[self.dolphin].messages[f'{speaker_address[0]}:{speaker_address[1]}']):
             message = Receiver.listeners[self.dolphin].messages[f'{speaker_address[0]}:{speaker_address[1]}'].pop(0)
-            # logger.write(message)
-            # logger.write(f"Message: {Receiver.listeners[self.dolphin].messages[f'{speaker_address[0]}:{speaker_address[1]}']}")
-            # logger.write(f"Buffer: {Receiver.listeners[self.dolphin].buffers[f'{speaker_address[0]}:{speaker_address[1]}']}")
+            # print(message)
+            # print(f"Message: {Receiver.listeners[self.dolphin].messages[f'{speaker_address[0]}:{speaker_address[1]}']}")
+            # print(f"Buffer: {Receiver.listeners[self.dolphin].buffers[f'{speaker_address[0]}:{speaker_address[1]}']}")
 
             # ------------------- handler subroutine
             content = message["content"]
 
-            logger.write(content)
+            print(content)
 
             if not content.startswith("Hello"):
                response = "Hello 10"
@@ -359,7 +368,6 @@ class Processor():
       except RuntimeError:
          pass
 
-
 class Transmitter():
    def __init__(self, dolphin):
       self.dolphin = dolphin
@@ -373,10 +381,17 @@ class Transmitter():
 
    speakers = {}
 
-   def speak(self, address):
-      self.messages[f'{address[0]}:{address[1]}'] = []
+   class thread(threading.Thread):
+      def __init__(_self, self, address):
+         threading.Thread.__init__(_self)
+         _self.self = self
+         _self.address = address
 
-      pool.assign(self.action, [address])
+      def run(_self):
+         Transmitter.speakers[_self.self.dolphin].action(_self.address)
+
+   def speak(self, address):
+      self.thread(self, address).start()
 
    def connect(self, listener):
       listener_socket = self.listeners[f'{listener[0]}:{listener[1]}']
@@ -389,6 +404,8 @@ class Transmitter():
       return listener_socket
 
    def action(self, address):
+      self.messages[f'{address[0]}:{address[1]}'] = []
+
       while True:
          # Wait for message(s) to be registered, and speaker unlocked.
          self.lock.acquire()
@@ -409,7 +426,6 @@ class Transmitter():
    def stop(self):
       self.speaker.close()
 
-
 def start(args):
    dolphin = args[0]
 
@@ -424,13 +440,11 @@ def start(args):
 
    threading.Thread(target=listener.listen).start()
 
-
 def stop(args):
    dolphin = args[0]
 
    Receiver.listeners[dolphin].stop()
    # Stop other resources: threads, sockets etc
-
 
 def connect(args):
    host = args[0]
@@ -438,7 +452,6 @@ def connect(args):
    host_ip = host_addr[0]
    host_port = int(host_addr[1])
    gateway.connect((host_ip, host_port))
-
 
 def handshake(args):
    host = args[2]
@@ -448,23 +461,9 @@ def handshake(args):
       pass # Report error here
 
 
-def ping(_):
-   logger.write("Hello", end=" ")
-   logger.write("World")
-   logger.write("Hi")
-   return (0, "online")
-
-
-def view(args):
-   if args[0] == "logs":
-      kind = args[1] if len(args) > 1 else "all"
-
-      if kind == "all":
-         logs = logger.all()
-      if kind == "last":
-         logs = logger.last()
-
-      return (0, logs)
+# Delete later
+def dummy(args):
+   return
 
 
 commands = [
@@ -472,31 +471,22 @@ commands = [
    "stop",
    "connect",
    "handshake",
-   "ping",
-   "view"
+   "dummy"
 ]
-
 
 def run(raw_input):
    Input = raw_input.split(" ") # Work on this
    command = Input[0].lower()
-   try: # If args are given
-      args = Input[1:]
-   except IndexError:
-      args = ()
+   args = Input[1:]
 
    if command in commands:
-      try:
-         output = globals()[command](args)
-      except Exception as error:
-         output = (1, str(error))
+      output = globals()[command](args)
    else:
       output = (1, f"Command '{command}' not recognized.")
 
    return output or (0, "success")
 
-
-def http_control(environ, start_response):
+def Input(environ, start_response):
    raw_input = environ["wsgi.input"].read().strip().decode('utf-8')
 
    output = run(raw_input)
@@ -517,36 +507,9 @@ def http_control(environ, start_response):
    response = json.dumps(response)
    return [response.encode()]
 
-
-def stdio_control():
-   while True:
-      raw_input = sys.stdin.readline().strip()
-
-      output = run(raw_input)
-
-      code = output[0]
-      message = output[1]
-      response = {
-         "code": code,
-         "message": message
-      }
-      response = json.dumps(response)
-
-      content_length = str(len(response))
-      sys.stdout.write(content_length + '\n')
-      sys.stdout.write(response + '\n')
-      sys.stdout.flush()
-
-
 def server():
-   app = socketio.WSGIApp(gateway.host, http_control, socketio_path=SOCKETIO_PATH)
+   app = socketio.WSGIApp(gateway.host, Input, socketio_path=SOCKETIO_PATH)
    wsgi.server(listen((Interface, Port)), app, log_output=False)
-
 
 gateway = Authentication()
 threading.Thread(target=server).start()
-threading.Thread(target=stdio_control).start()
-
-# sys.stderr.write("Hello\n")
-
-sys.stderr.write("\n")

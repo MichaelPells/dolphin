@@ -1,33 +1,50 @@
-# import socket
-# import threading
-# import time
+import socket
+import requests
+import threading
+import time
 
-# status = {}
-# status["_closed"] = True
+serving = False
 
-# def create_socket(port):
-#    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-#    sock.bind(("", port))
-#    sock.listen(5)
+def server():
+    listener = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    listener.bind(("", 4000))
+    listener.listen(5)
 
-#    while True:
-#       conn, addr = sock.accept()
-#       while True:
-#          data = conn.recv(1024)
-#          print(f'SOCK {port}: {data}')
+    global serving
+    serving = True
 
-# threading.Thread(target=create_socket, args=(3000))
-# threading.Thread(target=create_socket, args=(4000))
+    connection, address = listener.accept()
+    print(address)
 
-# time.sleep(10)
+    message = b''
 
-class o:
-    a = True
+    while True:
+        data = connection.recv(4096)
+        # if not data:
+        break
 
-cat = o
-dog = o
-dog = cat
+    message = b'HTTP/1.1 200 OK \r\nContent-Type: text/plain\r\nContent-Length: 5\r\n\r\nHELLO'
+    connection.sendall(message + b'\n')
+    connection.close()
 
-print(dog.a)
-cat.a = False
-print(dog.a)
+def client():
+    global serving
+    while not serving: pass
+
+    print("now sending")
+    response = requests.post("http://127.0.0.1:4000", data="Hello")
+    print(response.elapsed)
+    print(response.text)
+
+    # sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    # sock.connect(("127.0.0.1", 4000))
+    # print(sock.getpeername())
+
+    # message = "Hello"
+
+    # sock.sendall(bytes(message, "utf-8"))
+    # response = sock.recv(4096)
+    # print(response)
+
+threading.Thread(target=server).start()
+threading.Thread(target=client).start()
