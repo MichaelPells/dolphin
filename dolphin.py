@@ -17,7 +17,11 @@ import time # testing
 pool = Pool()
 pool.start()
 
-Settings = json.loads(open("./configurables/settings.json").read())
+try:
+   Settings = json.loads(open("./configurables/settings.json").read())
+except FileNotFoundError:
+   sys.stderr.write("Settings missing")
+
 Interface = Settings["Interface"] # Is the term 'Interface' correct for this usage?
 Port = int(sys.argv[1]) if len(sys.argv) > 1 else int(Settings["Port"]) # This solution has not considered other use cases yet.
 Role = Settings["Role"]
